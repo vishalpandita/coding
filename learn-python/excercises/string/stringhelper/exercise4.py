@@ -1,0 +1,1 @@
+print(len('how many letters in this string?'))

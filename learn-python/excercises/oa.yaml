@@ -1,0 +1,272 @@
+openapi: 3.0.0
+info:
+  version: v1.0.0
+  title: NIS APIs for dpform integration
+  description: "# Teams Order Handling Via DPForms.\n\n**Create/ Update Domain**\n\nThis API would be called at the time of committing DPForm i.e state changes to revised complete\n * Creates a new document in the collection in case no domain name is found in the collection.\n * Adds DPForm and customer details in the case domain name is already existing.\n * Modifies nested items in case DPForm Id is already present in the collection.\n * Always returns a fqdnId in the response.\n * fqdnId returned can be either new or reused.\n * For virtual trunk expects a fqdnId of the shared in the input and return it after updating the domain collection.\n\n**Get Domain by name**\n This API will fetch the whole document for the given domain name.\n - Used to determine or detect existing Shared trunk and help the user to arrive at better trunk type selection.\n\n**fqdnId rules**\n- In the case of the first DPForm for a domain generate a new fqdnId and set it as domainFqdnId as well. This would be the creation of a domain record for the first time.\n- In case the request body has a virtual trunk it will have fqdnId in the input. Reuse the same fqdnId.\n- In the case of cloudSBC always return domainFqdnId.\n- In the case of LBR always generate a new fqdnId.\n- In the case of dedicated or shared trunk reuse the domain fqdnId in case the region in question does not have any shared or dedicated trunk otherwise create a new fqdnId if either of one is present in that region.\n**DPForm UX Flow**\n- If customer collection has a domain present then pre-populate the primary domain.\n- For a new customer modification of the primary domain would be allowed only till the form hasn't been committed (revised complete).\n- The selection flow shall execute as given below\n```\nif cloudSBC is selected then \n                    populate a non-editable cloud SBC custom 3rd tab.\nelse if LBR is selected then\n                    populate a standard ribbon 3rd tab with editing allowed.\nelse \n                    Fetch details for the primary domain\n                    if Shared trunks are present in the current region then\n                                Present details of the trunk with highest fqdnId\n                                get Input for Virtual trunk\n                                if yes then\n                                        populate a non-editable 3rd tab. Contents from parent DPForm.\n                                else \n                                        populate a standard ribbon 3rd tab with editing allowed\n                     else\n                                 ask for the shared (multiparty) trunk and accordingly create either \n                                 shared or dedicated trunk      \n```"
+  termsOfService: 'https://nasdev.tatacommunications.com/terms-of-conditions'
+  contact:
+    name: nas dev
+    email: nasdev@tatacommunications.com
+    url: http://nasdev.tatacommunications.com/contact-us
+  license:
+    name: Copyright NAS developers 2021
+servers:
+  # Added by API Auto Mocking Plugin
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Personal_learning/nis-api/v1.0.0
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/demo/nis-api/v1.0.0
+  # Added by API Auto Mocking Plugin
+  - description: Development Server
+    url: https://localhost:8080/demo/nis-api/v1.0.0
+security: 
+  - basicAuth: []
+  
+tags: 
+  - name: domain
+  
+paths:
+  /domains:
+    post:
+      tags:
+      - domain
+      summary: Patch domain information to primary domain collection
+      operationId: updateDomain
+      requestBody:
+        description: DPForm details that would be patched to primary domain
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dpform'
+            examples:
+              option1:
+                summary: CloudSBC
+                value:
+                  primaryDomainName: abc15.com
+                  region: oceana
+                  option: cloudSBC
+                  type: shared
+                  customerId: af2a7ae7bc66cc3dc4d480b3
+                  dpFormId: nad46tgf43jgjdsgyjjghji3
+                  
+              option2:
+                summary: Ribbon-LBR
+                value:
+                  primaryDomainName: abc15.com
+                  region: oceana
+                  option: ribbonSBC
+                  type: lbr
+                  customerId: af2a7ae7bc66cc3dc4d480b3
+                  dpFormId: nad46tgf43jgjdsgyjjghji3
+                  
+              option3:
+                summary: Ribbon-Dedicated
+                value:
+                  primaryDomainName: abc15.com
+                  region: oceana
+                  option: ribbonSBC
+                  type: dedicated
+                  customerId: af2a7ae7bc66cc3dc4d480b3
+                  dpFormId: nad46tgf43jgjdsgyjjghji3
+                  
+              option4:
+                summary: Ribbon-Virtual
+                value:
+                  primaryDomainName: abc15.com
+                  region: oceana
+                  option: ribbonSBC
+                  type: virtual
+                  customerId: af2a7ae7bc66cc3dc4d480b3
+                  dpFormId: nad46tgf43jgjdsgyjjghji3
+                  fqdnId: 10017
+                  
+              option5:
+                summary: Ribbon-Shared
+                value:
+                  primaryDomainName: abc15.com
+                  region: oceana
+                  option: ribbonSBC
+                  type: virtual
+                  customerId: af2a7ae7bc66cc3dc4d480b3
+                  dpFormId: nad46tgf43jgjdsgyjjghji3
+                
+
+        required: true
+      responses:
+        200:
+          description: dpformid is saved and fqdnid returned back
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fqdnidresponse'
+        400:
+          description: Error occurred somewhere
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400'
+                
+            
+          
+  /domains/{domainName}:
+    get:
+      tags: 
+      - domain
+      summary: Fetch domain details
+      description: Returns all teams trunk configuration for the domain
+      operationId: getDomainByName
+      parameters: 
+      - name: domainName
+        in: path
+        description: primary domain name
+        required: true
+        schema:
+          type: string
+          example: tatacommunications.com
+      responses:
+        200:
+          description: domain details found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/domain'
+        400:
+          description: Error occurred somewhere
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400'
+          
+      
+  
+components:
+  securitySchemes:
+    basicAuth: 
+      type: http
+      scheme: basic
+    
+
+  schemas:
+    fqdnidresponse:
+      description: 'Schema for fqdnId response'
+      type: object
+      properties:
+        fqdnId:
+          type: string
+          example: "10017"
+        isReused:
+          type: boolean
+          example: false
+          
+    400:
+      description: 'Error returned'
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Bad-request--Invalid body in your request"
+          
+    dpform:
+      description: 'Schema for dpform'
+      type: object
+      properties:
+        primaryDomainName:
+          type: string
+          description: "Primary domain of customer office 365 tenant.\r\n>Note: It is the primary key for the collection.\r\n`Existing` entry will update else insert (upsert)"
+          example: "tatacommunications.com"
+        region:
+          type: string
+          description: One of four regions where SBCs are selected.
+          x-enumNames:
+          - northamerica
+          - mena
+          - oceana
+          - asia
+          enum: 
+          - northamerica
+          - mena
+          - oceana
+          - asia
+        option:
+          type: string
+          x-enumNames:
+          - cloudSBC
+          - ribbonSBC
+          enum: 
+          - cloudSBC
+          - ribbonSBC
+        type:
+          type: string
+          description: Trunk Type
+          enum: 
+          - shared
+          - virtual
+          - dedicated
+          - lbr
+        customerId:
+          type: string
+          format: guid
+          description: Guid of the customer on the current dpform
+        dpFormId:
+          type: string
+          format: guid
+          description: Current DPForm Id
+        fqdnId:
+          type: string
+          nullable: true
+          description: "fqdnid of the virtual trunk.\n\nRequired if `type = shared`"
+          
+          
+    domain:
+      description: 'Schema for domain object. It has its own collection'
+      type: object
+      properties:
+        domain:
+          type: string
+          description: Gets primary domain details. Fetches all SBCs (Cloud,Ribbon) for the primary domain across customers.
+          example: "tatacommunications.com"
+        domainFqdnId:
+          description: Domain parent fqdnid. This id is assigned to the domain during creation at the first time
+          type: string
+          example: "10017"
+        customerids: 
+          description: List of all customer ids under this domain who have dpforms for teams.
+          type: array
+          items:
+            type: string
+            format: guid
+        cloudSbc:
+          type: array
+          description: Array of cloudsbc DPForms
+          items:
+            $ref: '#/components/schemas/SBC'
+        ribbonSBC:
+          type: array
+          description: Array of ribbon SBC DPForms
+          items:
+            $ref: '#/components/schemas/SBC'
+    SBC:
+      description: 'Individual Teams DPForm details'
+      type: object
+      properties:
+        region:
+          type: string
+          enum: 
+          - northamerica
+          - mena
+          - oceana
+          - asia
+        dpformId:
+          type: string
+          format: guid
+        fqdnid:
+          type: string
+        type:
+          type: string
+          enum: 
+          - shared
+          - virtual
+          - dedicated
+          - lbr
+               

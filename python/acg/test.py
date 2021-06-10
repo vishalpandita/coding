@@ -1,0 +1,1 @@
+print("Isn't this beautiful man")
